@@ -1,0 +1,5 @@
+# npm ignores
+node_modules
+
+# required auth ignore
+token.js

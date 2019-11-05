@@ -5,6 +5,13 @@ var API_TOKEN = require('./token');
 
 var limiter = new RateLimiter(1, 1000);
 
+// promise wrapper around rate limiter call
+function removeToken() {
+    return new Promise((resolve) => {
+        limiter.removeTokens(1, resolve);
+    });
+}
+
 function testRequest() {
     axios.get('http://localhost:5000/api')
     .then(res => {
@@ -178,7 +185,7 @@ function getStats(summonerName, queueType, numGames) {
         console.log("Please request numGames of at least 1.");
         return null;
     }
-    let maxNumGames = 5;
+    let maxNumGames = 20;
     let numGamesRetrieved = numGames > maxNumGames ? maxNumGames : numGames;
     console.log(numGamesRetrieved);
     return getLOLAccountID(summonerName)
@@ -204,34 +211,61 @@ function getStats(summonerName, queueType, numGames) {
             let statsArray = [];
 
             // non rate limited version
-            if(false) {
-                statsArray = Promise.all(gamesRetrieved.map(gameInfo => {
-                    // getStatsByGame needs to be rate limited
+
+            // statsArray = Promise.all(gamesRetrieved.map(gameInfo => {
+            //     // getStatsByGame needs to be rate limited
+            //     return getStatsByGame(gameInfo["gameId"], gameInfo["champion"])
+            //     .catch(err => {
+            //         throw err;
+            //     });
+            // }))
+            // .catch(err => {
+            //     throw err;
+            // });
+
+            // testing rate limited version (v1)
+            // rate limited version works but is a very inelegant solution
+            // cannot get the entire statsArray at one time
+            // current rate limit is 1 per second: overly conservative
+
+            // gamesRetrieved.map(gameInfo => {
+            //     limiter.removeTokens(1, (err, requestsRemaining) => {
+            //         getStatsByGame(gameInfo["gameId"], gameInfo["champion"])
+            //         .then(stats => {
+            //             statsArray.push(stats);
+            //         })
+            //         .catch(err => {
+            //             console.log(err);
+            //         });
+            //     });
+            // });
+
+            // testing rate limited version (v2)
+            // rate limited version works
+            // uses promisifying the rate limiter call as suggested in:
+            // https://stackoverflow.com/questions/52051275/promisify-callbacks-that-use-rate-limiter
+            // current rate limit is 1 per second: overly conservative
+
+            return Promise.all(gamesRetrieved.map(gameInfo => {
+                return removeToken()
+                .then(() => {
                     return getStatsByGame(gameInfo["gameId"], gameInfo["champion"])
                     .catch(err => {
                         throw err;
                     });
-                }))
+                })
                 .catch(err => {
+                    console.log(err);
                     throw err;
                 });
-            } else { // testing rate limited version
-                // rate limited version works
-                // current rate limit is 1 per second: overly conservative
-                gamesRetrieved.map(gameInfo => {
-                    limiter.removeTokens(1, (err, requestsRemaining) => {
-                        getStatsByGame(gameInfo["gameId"], gameInfo["champion"])
-                        .then(stats => {
-                            statsArray.push(stats);
-                        })
-                        .catch(err => {
-                            console.log(err);
-                        });
-                    });
-                });
-            }
-
-            return statsArray;
+            }))
+            .then(data => {
+                console.log(data);
+            })
+            .catch(err => {
+                console.log("some error occurred in promise all"); 
+            });
+            
         })
         .catch(err => {
             throw err;
@@ -242,61 +276,12 @@ function getStats(summonerName, queueType, numGames) {
     });
 }
 
-function getPokemonName(pokedexID) {
-    if(isNaN(pokedexID)) {
-        return null;
-    }
-    return axios.get(`https://pokeapi.co/api/v2/pokemon/${pokedexID}`)
-    .then(res => {
-        // console.log(res.data);
-        return res.data["forms"][0]["name"];
-    })
-    .catch(err => {
-        console.log(err);
-        throw err;
-    });
-}
-
-function promiseAllTest() {
-    let idArray = [1, 2, 3, 4, 5];
-
-    Promise.all(idArray.map(id => {
-        return getPokemonName(id)
-        .catch(err => {
-            throw err;
-        });
-    }))
-    .then(array => {
-        console.log("succeeded!");
-        console.log(array);
-    })
-    .catch(err => {
-        console.log("failed!");
-        console.log(err);
-    });
-}
-
-
-
 // testRequest();
 
 // printResult(getDDragonChampKeys);
 // getLOLSummonerID("TitaniumGod");
-let stats = getStats("TitaniumGod", [420, 430], 5);
-
-setTimeout(() => {
-    stats
-    .then(statsArr => {
-        console.log(statsArr);
-    })
-    .catch(err => {
-        console.log(err);
-    });
-}, 10000);
+getStats("TitaniumGod", [420, 430], 5);
 
 // can only make 20 requests per second
 // can only make 100 requests per 2 minutes
 // getStatsByGame(3192594419, 74);
-
-// getPokemonData(1);
-// promiseAllTest();

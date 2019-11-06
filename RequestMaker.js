@@ -270,12 +270,16 @@ class RequestMaker {
     }
 }
 
-// can only make 20 requests per second
-// can only make 100 requests per 2 minutes
-let reqSender = new RequestMaker();
+function reqSenderTest() {
+    // can only make 20 requests per second
+    // can only make 100 requests per 2 minutes
+    let reqSender = new RequestMaker();
 
-// reqSender.getLOLSummonerID("TitaniumGod");
+    // reqSender.getLOLSummonerID("TitaniumGod");
 
-// reqSender.getStatsByGame(3192594419, 74);
+    // reqSender.getStatsByGame(3192594419, 74);
 
-reqSender.getStats("TitaniumGod", [420, 430], 5);
+    reqSender.getStats("TitaniumGod", [420, 430], 5);
+}
+
+export default RequestMaker;

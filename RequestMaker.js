@@ -1,12 +1,13 @@
 var axios = require('axios');
 var RateLimiter = require('limiter').RateLimiter;
-var API_TOKEN = require('./token');
 
-
+// class that all calls to League of Legends APIs are made through
+// TODO: Convert all axios requests to na1.api.riotgames.com to use RateLimiter
 class RequestMaker {
-    constructor() {
+    constructor(apiToken) {
         // limit is one fourth of actual rate limit
         this.limiter = new RateLimiter(25, 120000);
+        this.apiToken = apiToken;
     }
 
     removeToken() {
@@ -52,7 +53,7 @@ class RequestMaker {
             url: `https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${summonerName}`,
             method: 'get',
             headers: {
-                "X-Riot-Token": API_TOKEN
+                "X-Riot-Token": this.apiToken
             }
         })
         .then(res => {
@@ -72,7 +73,7 @@ class RequestMaker {
             url: `https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${summonerName}`,
             method: 'get',
             headers: {
-                "X-Riot-Token": API_TOKEN
+                "X-Riot-Token": this.apiToken
             }
         })
         .then(res => {
@@ -122,7 +123,7 @@ class RequestMaker {
             url: requestURL,
             method: 'get',
             headers: {
-                "X-Riot-Token": API_TOKEN
+                "X-Riot-Token": this.apiToken
             }
         })
         .then(res => {
@@ -141,7 +142,7 @@ class RequestMaker {
             url: `https://na1.api.riotgames.com/lol/match/v4/matches/${gameID}`,
             method: 'get',
             headers: {
-                "X-Riot-Token": API_TOKEN
+                "X-Riot-Token": this.apiToken
             }
         })
         .then(res => {
@@ -201,11 +202,9 @@ class RequestMaker {
     
                 let gamesRetrieved = gameInfoArr.slice(0, numGamesRetrieved);
     
-                let statsArray = [];
-    
                 // non rate limited version
     
-                // statsArray = Promise.all(gamesRetrieved.map(gameInfo => {
+                // return Promise.all(gamesRetrieved.map(gameInfo => {
                 //     // getStatsByGame needs to be rate limited
                 //     return getStatsByGame(gameInfo["gameId"], gameInfo["champion"])
                 //     .catch(err => {
@@ -270,16 +269,5 @@ class RequestMaker {
     }
 }
 
-function reqSenderTest() {
-    // can only make 20 requests per second
-    // can only make 100 requests per 2 minutes
-    let reqSender = new RequestMaker();
 
-    // reqSender.getLOLSummonerID("TitaniumGod");
-
-    // reqSender.getStatsByGame(3192594419, 74);
-
-    reqSender.getStats("TitaniumGod", [420, 430], 5);
-}
-
-export default RequestMaker;
+module.exports = RequestMaker;

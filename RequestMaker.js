@@ -8,6 +8,14 @@ class RequestMaker {
         // limit is one fourth of actual rate limit
         this.limiter = new RateLimiter(25, 120000);
         this.apiToken = apiToken;
+        this.gameType = {
+            "400": "Draft Pick",
+            "420": "Ranked Solo/Duo",
+            "430": "Blind Pick",
+            "440": "Ranked Flex",
+            "450": "ARAM",
+            "460": "Twisted Treeline 3v3"
+        }
     }
 
     removeToken() {
@@ -148,23 +156,33 @@ class RequestMaker {
         .then(res => {
             let data = res.data;
             let playerDataArr = data["participants"];
-            for(let i = 0; i < playerDataArr.length; i++) {
-                let playerData = playerDataArr[i];
-                // console.log(playerData["championId"]);
-                if(playerData["championId"] == championID) {
-                    return playerData["stats"];
+
+            function getPlayerStats() {
+                for(let i = 0; i < playerDataArr.length; i++) {
+                    let playerData = playerDataArr[i];
+                    if(playerData["championId"] == championID) {
+                        return playerData["stats"];
+                    }
                 }
             }
-            throw "championID not found";
+
+            let fullStats = getPlayerStats();
+
+            function processStats({win, kills, assists, deaths, wardsPlaced, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned}) {
+                return {win, kills, assists, deaths, wardsPlaced, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned};
+            } 
+
+            let gameStats = processStats(fullStats);
+
+            let gameInfo = {
+                championID,
+                gameStats
+            };
+            return gameInfo;
         })
         // .then(data => {
         //     console.log(data);
         // })
-        .then(({win, kills, assists, deaths, wardsPlaced, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned}) => {
-            let essentialInfo = {win, kills, assists, deaths, wardsPlaced, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned};
-            // console.log(essentialInfo);
-            return essentialInfo;
-        })
         .catch(err => {
             console.log(err);
             throw err;
@@ -181,10 +199,10 @@ class RequestMaker {
         }
         let maxNumGames = 20;
         let numGamesRetrieved = numGames > maxNumGames ? maxNumGames : numGames;
-        console.log(numGamesRetrieved);
+        console.log(`numGamesRetrieved: ${numGamesRetrieved}`);
         return this.getLOLAccountID(summonerName)
         .then(id => {
-            console.log(id);
+            // console.log(id);
             return this.getMatchList(id, queueType)
             .then(matchList => {
                 // uses object destructuring
@@ -251,9 +269,10 @@ class RequestMaker {
                         throw err;
                     });
                 }))
-                .then(data => {
-                    console.log(data);
-                })
+                // used for debugging
+                // .then(data => {
+                //     console.log(data);
+                // })
                 .catch(err => {
                     console.log("some error occurred in promise all"); 
                 });

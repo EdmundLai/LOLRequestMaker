@@ -156,6 +156,7 @@ class RequestMaker {
         .then(res => {
             let data = res.data;
             let playerDataArr = data["participants"];
+            let gameLength = data["gameDuration"];
 
             function getPlayerStats() {
                 for(let i = 0; i < playerDataArr.length; i++) {
@@ -168,15 +169,32 @@ class RequestMaker {
 
             let fullStats = getPlayerStats();
 
-            function processStats({win, kills, assists, deaths, wardsPlaced, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned}) {
-                return {win, kills, assists, deaths, wardsPlaced, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned};
+            function processStats({win, kills, assists, deaths, visionScore, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned}) {
+                return {win, kills, assists, deaths, visionScore, totalMinionsKilled, totalDamageDealt, totalDamageDealtToChampions, goldEarned};
             } 
 
             let gameStats = processStats(fullStats);
 
+            function calculateExtraStats(stats, gameLength) {
+                let gameLenInMin = gameLength / 60;
+                let csPerMin = stats["totalMinionsKilled"] / gameLenInMin;
+                let goldPerMin = stats["goldEarned"] / gameLenInMin;
+
+                csPerMin = csPerMin.toFixed(1);
+                goldPerMin = goldPerMin.toFixed(1);
+
+                return {
+                    csPerMin, goldPerMin
+                };
+            }
+
+            let extraStats = calculateExtraStats(gameStats, gameLength);
+
             let gameInfo = {
                 championID,
-                gameStats
+                gameLength,
+                gameStats,
+                extraStats
             };
             return gameInfo;
         })
